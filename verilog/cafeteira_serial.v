@@ -3,11 +3,14 @@ module cafeteira_serial (
     input reset,
     input rxd,
     output reg pronto,
-    output reg [7:0] dados
+    output reg [1:0] modo
 );
 
 wire s_finished;
 wire [7:0] s_data;
+
+parameter [1:0] pequeno = 2'b01;
+parameter [1:0] grande  = 2'b10;
 
 uart_rx receptor_serial (
     .clk      (clock),
@@ -19,12 +22,13 @@ uart_rx receptor_serial (
 
 always @(posedge clock) begin
     if (s_finished) begin
-        dados <= s_data;
+        if      (s_data == "P") modo <= pequeno;
+        else if (s_data == "G") modo <= grande;
         pronto <= 1'b1;
     end
     else if (reset) begin
-        dados <= 8'b0;
-        pronto <= 0'b0;
+        modo <= 2'b0;
+        pronto <= 1'b0;
     end
     else begin
         pronto <= 1'b0;

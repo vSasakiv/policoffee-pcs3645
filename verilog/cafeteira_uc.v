@@ -10,7 +10,7 @@ module cafeteira_uc (
     input wire timeout_xicara, // FD
     input wire tem_xicara, // FD
     input wire fim_bomba, // FD
-    input wire fim_ebulidor, // ESP
+    input wire fim_ebulidor, // FD
     input wire timeout_ebulidor, // FD
     input wire fim_valvula, // FD
 
@@ -19,19 +19,14 @@ module cafeteira_uc (
     output reg zera_bomba, // FD
     output reg zera_valvula, // FD
     output reg zera_serial, // FD
-    output reg zera_timeout_ebulidor, // FD
+    output reg zera_ebulidor, // FD
     output reg medir_agua, // FD
-    output reg conta_timeout_agua, // FD
     output reg erro_sem_agua, // ESP
     output reg verifica_xicara, // FD
-    output reg conta_timeout_xicara, // FD
     output reg erro_sem_xicara, // ESP
-    output reg liga_bomba, // BOMBA
-    output reg conta_bomba, // FD
-    output reg liga_ebulidor, // EBULIDOR
-    output reg conta_timeout_ebulidor, // FD
-    output reg liga_valvula, // VALVULA
-    output reg conta_valvula, // FD
+    output reg liga_bomba, // FD
+    output reg liga_ebulidor, // FD
+    output reg liga_valvula, // FD
 
     output wire [4:0] db_estado
 );
@@ -55,10 +50,16 @@ module cafeteira_uc (
     parameter [4:0] erro_xicara           = 5'b01011; 
 
     parameter [4:0] ativa_bomba           = 5'b01100; 
-    parameter [4:0] ativa_ebulidor        = 5'b01101; 
-    parameter [4:0] erro_ebulidor         = 5'b01110; 
-    parameter [4:0] ativa_valvula         = 5'b01111; 
-    parameter [4:0] fim                   = 5'b10000; 
+    parameter [4:0] espera_bomba          = 5'b01101;
+
+    parameter [4:0] ativa_ebulidor        = 5'b01110; 
+    parameter [4:0] espera_ebulidor       = 5'b10010;
+    parameter [4:0] erro_ebulidor         = 5'b01111; 
+
+    parameter [4:0] ativa_valvula         = 5'b10000; 
+    parameter [4:0] espera_valvula        = 5'b10011; 
+
+    parameter [4:0] fim                   = 5'b10001; 
 
 	 assign db_estado = Eatual;
 	 
@@ -104,14 +105,17 @@ module cafeteira_uc (
             end
             erro_xicara: Eprox = inicial;
 
-            ativa_bomba: Eprox = fim_bomba ? ativa_ebulidor : ativa_bomba;
+            ativa_bomba: Eprox = espera_bomba;
+            espera_bomba: Eprox = fim_bomba ? ativa_ebulidor : espera_bomba;
 
-            ativa_ebulidor: begin
+            ativa_ebulidor: Eprox = espera_ebulidor;
+            espera_ebulidor: begin
                 if (fim_ebulidor) Eprox = ativa_valvula;
-                else Eprox = timeout_ebulidor ? erro_ebulidor : ativa_ebulidor;
+                else Eprox = timeout_ebulidor ? erro_ebulidor : espera_ebulidor;
             end
 
-            ativa_valvula: Eprox = fim_valvula ? fim : ativa_valvula;
+            ativa_valvula: Eprox = espera_valvula;
+            espera_valvula: Eprox = fim_valvula ? fim : espera_valvula;
 
             fim: Eprox = inicial;
 
@@ -124,54 +128,38 @@ module cafeteira_uc (
         zera_sensor_agua = 0;
         zera_sensor_xicara = 0;
         zera_serial = 0;
-        zera_timeout_ebulidor = 0;
+        zera_ebulidor = 0;
         zera_valvula = 0;
         medir_agua = 0;
-        conta_timeout_agua = 0;
         erro_sem_agua = 0;
         verifica_xicara = 0;
-        conta_timeout_xicara = 0;
         erro_sem_xicara = 0;
         liga_bomba = 0;
-        conta_bomba = 0;
         liga_ebulidor = 0;
-        conta_timeout_ebulidor = 0;
         liga_valvula = 0;
-        conta_valvula = 0; 
 
         if (Eatual == prepara) begin
             zera_bomba = 1;
             zera_sensor_agua = 1;
             zera_sensor_xicara = 1;
             zera_serial = 1;
-            zera_timeout_ebulidor = 1;
+            zera_ebulidor = 1;
             zera_valvula = 1;
         end
 
         else if (Eatual == prepara_sensor_agua) zera_sensor_agua = 1;
         else if (Eatual == ativa_sensor_agua) medir_agua = 1;
-        else if (Eatual == espera_sensor_agua) conta_timeout_agua = 1;
         else if (Eatual == erro_agua) erro_sem_agua = 1;
         
         else if (Eatual == prepara_sensor_xicara) zera_sensor_xicara = 1;
         else if (Eatual == ativa_sensor_xicara) verifica_xicara = 1;
-        else if (Eatual == espera_sensor_xicara) conta_timeout_xicara = 1;
         else if (Eatual == erro_xicara) erro_sem_xicara = 1;
 
-        else if (Eatual == ativa_bomba) begin
-            liga_bomba = 1;
-            conta_bomba = 1;
-        end
+        else if (Eatual == ativa_bomba) liga_bomba = 1;
 
-        else if (Eatual == ativa_ebulidor) begin
-            liga_ebulidor = 1;
-            conta_timeout_ebulidor = 1;
-        end
+        else if (Eatual == ativa_ebulidor) liga_ebulidor = 1;
 
-        else if (Eatual == ativa_valvula) begin
-            liga_valvula = 1;
-            conta_valvula = 1; 
-        end
+        else if (Eatual == ativa_valvula) liga_valvula = 1;
     end
 
 endmodule

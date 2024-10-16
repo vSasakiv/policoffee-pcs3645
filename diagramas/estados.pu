@@ -2,7 +2,7 @@
 !theme plain
 
 state Inicio ##[bold]green
-state Prepara: zera_sensor_agua=1 \nzera_sensor_xicara=1 \nzera_bomba=1 \nzera_valvula=1 \nzera_serial=1 \nzera_timeout_ebulidor=1
+state Prepara: zera_sensor_agua=1 \nzera_sensor_xicara=1 \nzera_bomba=1 \nzera_valvula=1 \nzera_serial=1 \nzera_ebulidor=1
 
 state EsperaModo
 
@@ -17,12 +17,17 @@ state EsperaSensorXicara ##[bold]aqua: conta_timeout_xicara=1
 state ErroSemAgua ##[bold]red:     erro_sem_agua=1
 state ErroSemXicara ##[bold]red:   erro_sem_xicara=1
 
-state AtivaBomba:      ativa_bomba=1 \nconta_bomba=1
+state AtivaBomba:      ativa_bomba=1
+state EsperaBomba
 
-state AtivaEbulidor:   ativa_ebulidor=1 \nconta_timeout_ebulidor=1
+state AtivaEbulidor:   ativa_ebulidor=1
+state EsperaEbulidor
+
 state ErroEbulidor ##[bold]red:    erro_ebulidor=1
 
-state AtivaValvula:    ativa_valvula=1 \nconta_valvula=1
+state AtivaValvula:    ativa_valvula=1 
+state EsperaValvula:
+
 state Fim ##[bold]red:             fim=1
 
 [*]               --> Inicio
@@ -47,17 +52,20 @@ EsperaSensorXicara  --> ErroSemXicara : pronto_sensor_xicara=1 && tem_xicara=0
 EsperaSensorXicara  --> AtivaBomba : pronto_sensor_xicara=1 && tem_xicara=1
 EsperaSensorXicara --> EsperaSensorXicara : pronto_sensor_xicara=0 && timeout_xicara=0
 
-AtivaBomba --> AtivaBomba : fim_bomba=0
-AtivaBomba --> AtivaEbulidor: fim_bomba=1
+AtivaBomba --> EsperaBomba
+EsperaBomba --> EsperaBomba : fim_bomba=0
+EsperaBomba --> AtivaEbulidor: fim_bomba=1
 
-AtivaEbulidor --> AtivaEbulidor: fim_ebulidor=0 && timeout_ebulidor=0
-AtivaEbulidor --> ErroEbulidor: timeout_ebulidor=1
-AtivaEbulidor --> AtivaValvula: fim_ebulidor=1
+AtivaEbulidor --> EsperaEbulidor
+EsperaEbulidor --> EsperaEbulidor: fim_ebulidor=0 && timeout_ebulidor=0
+EsperaEbulidor --> ErroEbulidor: timeout_ebulidor=1
+EsperaEbulidor --> AtivaValvula: fim_ebulidor=1
 ErroEbulidor --> Inicio
 
-AtivaValvula --> AtivaValvula: fim_valvula=0
+AtivaValvula --> EsperaValvula
+EsperaValvula --> EsperaValvula: fim_valvula=0
 
-AtivaValvula --> Fim: fim_valvula=1
+EsperaValvula --> Fim: fim_valvula=1
 Fim --> Inicio
 
 

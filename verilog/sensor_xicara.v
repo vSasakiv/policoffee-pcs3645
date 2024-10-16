@@ -3,7 +3,6 @@ module sensor_xicara (
     input reset,
     input medir,
     input echo,
-    input conta_timeout,
 
     output reg tem_xicara,
     output wire trigger,
@@ -11,8 +10,11 @@ module sensor_xicara (
     output reg pronto
 );
 
+    reg conta_timeout;
     wire pronto_sensor;
     wire [11:0] s_medida;
+
+    parameter [11:0] limite_xicara = 12'h150; // 15cm
 
     interface_hcsr04 sensor_xicara (
         .clock     (clock),
@@ -31,9 +33,18 @@ module sensor_xicara (
         if (pronto_sensor) begin
             // TROCAR POR VALORES REAIS DEPOIS
             pronto <= 1'b1;
-            if (s_medida > 12'h150) // 15cm
+            if (s_medida > limite_xicara) // 15cm
                     tem_xicara <= 0;
             else tem_xicara <= 1;
+        end
+
+        else if (medir)
+            conta_timeout <= 1'b1;
+
+        else if (reset) begin
+            conta_timeout <= 1'b0;
+            pronto <= 1'b0;
+            tem_xicara <= 1'b0;
         end
 
         else begin
@@ -43,7 +54,7 @@ module sensor_xicara (
     end
     
     contador_m #(
-        .M(50000000),
+        .M(50000000), // 1 seg
         .N(26)
     ) contador_timeout (
         .clock   (clock),
