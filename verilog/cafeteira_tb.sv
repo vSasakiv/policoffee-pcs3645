@@ -17,6 +17,7 @@ module cafeteira_tb;
     wire valvula_out;
     wire erro_sem_agua_out;
     wire erro_sem_xicara_out;
+    wire fim_out;
 
     cafeteira DUT (
         .clock (clock_in),
@@ -33,7 +34,8 @@ module cafeteira_tb;
         .ebulidor (ebulidor_out),
         .valvula (valvula_out),
         .erro_sem_agua (erro_sem_agua_out),
-        .erro_sem_xicara (erro_sem_xicara_out)
+        .erro_sem_xicara (erro_sem_xicara_out),
+        .fim (fim_out)
     );
 
     // Configurações do clock

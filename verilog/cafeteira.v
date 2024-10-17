@@ -7,6 +7,7 @@ module cafeteira (
     input echo_xicara,
     input fim_temperatura,
     
+    output wire fim,
     output wire trigger_agua,
     output wire trigger_xicara,
     output wire bomba,
@@ -102,6 +103,7 @@ cafeteira_uc uc (
     .fim_valvula(s_fim_valvula),
     .erro_sem_agua (erro_sem_agua),
     .erro_sem_xicara (erro_sem_xicara),
+    .pronto          (fim),
     .db_estado ()
 );
 

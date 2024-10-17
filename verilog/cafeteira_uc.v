@@ -27,6 +27,7 @@ module cafeteira_uc (
     output reg liga_bomba, // FD
     output reg liga_ebulidor, // FD
     output reg liga_valvula, // FD
+    output reg pronto,
 
     output wire [4:0] db_estado
 );
@@ -137,6 +138,7 @@ module cafeteira_uc (
         liga_bomba = 0;
         liga_ebulidor = 0;
         liga_valvula = 0;
+        pronto = 0;
 
         if (Eatual == prepara) begin
             zera_bomba = 1;
@@ -160,6 +162,8 @@ module cafeteira_uc (
         else if (Eatual == ativa_ebulidor) liga_ebulidor = 1;
 
         else if (Eatual == ativa_valvula) liga_valvula = 1;
+
+        else if (Eatual == fim) pronto = 1;
     end
 
 endmodule
