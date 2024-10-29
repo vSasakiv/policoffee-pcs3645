@@ -21,13 +21,14 @@
 #define PIN_TIMEOUT_EBULIDOR D6
 #define PIN_SENSOR_TEMPERATURA D7
 
-#define TEMPERATURA_ALVO 90
+#define TEMPERATURA_ALVO 30
 #define DELAY_PREPARACAO 200 // ms
 #define MAX_PAYLOAD_SIZE 32
 
 #define BIG_COFFEE_MODE 'G'
 #define TOPICO_INICIAR "malcong/inicio"
 #define LOGS_TOPIC "malcong/logs"
+#include <string>
 
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PASS;
@@ -78,18 +79,15 @@ public:
         digitalWrite(PIN_FIM_TEMPERATURA, LOW);
     }
 
-    bool inicia()
+    void inicia()
     {
-        bool deveComecar = verificaCondicoesPreparo();
-        if (deveComecar)
-        {
-            estadoAtual = INICIO;
-        }
-        return deveComecar;
+        logger("iniciando");
+        estadoAtual = INICIO;
     }
 
     void loop()
     {
+        bool comecou;
         switch (estadoAtual)
         {
         case AGUARDANDO:
@@ -97,24 +95,32 @@ public:
 
         case INICIO:
             iniciaPreparo();
-            estadoAtual = PREPARANDO;
-            break;
-
-        case PREPARANDO:
             delay(DELAY_PREPARACAO);
+
+            logger("escrevendo serial: ");
+            logger(String(BIG_COFFEE_MODE));
             softSerial.write(BIG_COFFEE_MODE);
-            estadoAtual = MONITORANDO_TEMPERATURA;
+            delay(500);
+            comecou = verificaCondicoesPreparo();
+
+            if (comecou) {
+              logger("tudo certo, monitorando temp");
+              estadoAtual = MONITORANDO_TEMPERATURA;  
+            } else { // FPGA retornou erro
+              logger("deu ruim");
+              estadoAtual = AGUARDANDO; // TODO: Estado de erro
+            }
             break;
 
         case MONITORANDO_TEMPERATURA:
             sensorTemperatura.requestTemperatures();
 
             if (!sensorTemperatura.getAddress(endereco_temp,0)) { 
-                Serial.println("SENSOR NAO CONECTADO");
+                logger("SENSOR NAO CONECTADO");
             } else {
                 float temperatura = sensorTemperatura.getTempC(endereco_temp); 
-                Serial.print("Temperatura = "); 
-                Serial.println(temperatura);
+                logger("Temperatura = "); 
+                logger(String(temperatura));
                 if (temperatura >= TEMPERATURA_ALVO)
                 {
                     digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
@@ -135,6 +141,12 @@ public:
 private:
     bool verificaCondicoesPreparo()
     {
+        logger("SEM AGUA: ");
+        logger(String(digitalRead(PIN_SEM_AGUA)));
+
+        logger("SEM XICARA: ");
+        logger(String(digitalRead(PIN_SEM_XICARA)));
+        
         return (digitalRead(PIN_SEM_AGUA) == LOW &&
                 digitalRead(PIN_SEM_XICARA) == LOW);
     }
@@ -247,6 +259,9 @@ void callback(char *topic, byte *payload, unsigned int length)
     memcpy(message, payload, length);
     message[length] = '\0';
 
+    logger("message received");
+    logger(String(topic));
+    logger(String(message)); 
     Serial.print("Message received on topic: ");
     Serial.println(topic);
     Serial.print("Message: ");
