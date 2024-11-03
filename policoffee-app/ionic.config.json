@@ -1,0 +1,7 @@
+{
+  "name": "PoliLockApp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}

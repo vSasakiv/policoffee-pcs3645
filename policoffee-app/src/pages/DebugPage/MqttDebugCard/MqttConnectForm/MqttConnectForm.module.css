@@ -1,0 +1,12 @@
+.input {
+    border: 1px solid var( --ion-color-medium-shade);
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.form {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}

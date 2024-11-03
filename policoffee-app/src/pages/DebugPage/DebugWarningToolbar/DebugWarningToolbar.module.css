@@ -1,0 +1,17 @@
+.footerToolbar {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+    padding: 10px; /* Add padding for better spacing */
+  }
+  
+  .footerText {
+    font-family: monospace;
+    color: var(--ion-color-danger-shade); /* Low contrast text color */
+  }
+  
+  .textIcon {
+    vertical-align: middle;
+    margin-left: 5px; /* Adjust as needed */
+  }
