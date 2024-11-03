@@ -12,22 +12,26 @@
 
 
 #define BAUD_RATE 9600
-#define PIN_RX 255
 #define PIN_PREPARAR D1
 #define PIN_TX D2
 #define PIN_FIM_TEMPERATURA D3
-#define PIN_SEM_AGUA D4
+#define PIN_SEM_AGUA D8
 #define PIN_SEM_XICARA D5
 #define PIN_TIMEOUT_EBULIDOR D6
 #define PIN_SENSOR_TEMPERATURA D7
 
+#define PIN_RX 255
 #define TEMPERATURA_ALVO 30
 #define DELAY_PREPARACAO 200 // ms
 #define MAX_PAYLOAD_SIZE 32
 
 #define BIG_COFFEE_MODE 'G'
+#define TOPICO_AGENDAR "malcong/scheduler/datetime"
+#define TOPICO_AGENDAMENTO_STATUS "malcong/scheduler/status"
 #define TOPICO_INICIAR "malcong/inicio"
 #define LOGS_TOPIC "malcong/logs"
+#define LED_BLINK_INTERVAL 500 // ms
+
 #include <string>
 
 const char *ssid = WIFI_SSID;
@@ -43,6 +47,8 @@ OneWire oneWire(PIN_SENSOR_TEMPERATURA);
 DallasTemperature sensorTemperatura(&oneWire);
 DeviceAddress endereco_temp;
 
+unsigned long previousMillis = 0;
+bool ledState = false;
 
 void setup_wifi();
 void setDateTime();
@@ -63,6 +69,8 @@ class ControladorCafe
 {
 private:
     EstadoCafe estadoAtual;
+    unsigned long previousTempMeasurementMillis = 0;
+    unsigned long delayTempMeasurementMillis = 20000; // 2s
 public:
     ControladorCafe()
     {
@@ -77,6 +85,8 @@ public:
         // Estado inicial dos pinos de saída
         digitalWrite(PIN_PREPARAR, LOW);
         digitalWrite(PIN_FIM_TEMPERATURA, LOW);
+
+        digitalWrite(LED_BUILTIN, HIGH); // LED starts off (HIGH is off for ESP8266)
     }
 
     void inicia()
@@ -88,6 +98,9 @@ public:
     void loop()
     {
         bool comecou;
+        unsigned long currentMillis;
+        setLEDState(); // Update LED state based on current state
+
         switch (estadoAtual)
         {
         case AGUARDANDO:
@@ -118,13 +131,14 @@ public:
             if (!sensorTemperatura.getAddress(endereco_temp,0)) { 
                 logger("SENSOR NAO CONECTADO");
             } else {
-                float temperatura = sensorTemperatura.getTempC(endereco_temp); 
-                logger("Temperatura = "); 
-                logger(String(temperatura));
-                if (temperatura >= TEMPERATURA_ALVO)
-                {
-                    digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
-                    estadoAtual = FINALIZADO;
+                currentMillis = millis();
+                // Só mede se passou o tempo
+                if (currentMillis - previousTempMeasurementMillis >= delayTempMeasurementMillis) {
+                    previousTempMeasurementMillis = currentMillis;
+
+                    if (measureTemp()) {
+                        estadoAtual = FINALIZADO;
+                    }
                 }
             }
             break;
@@ -138,7 +152,50 @@ public:
         }
     }
 
+    void blinkLED() {
+        unsigned long currentMillis = millis();
+        if (currentMillis - previousMillis >= LED_BLINK_INTERVAL) {
+            previousMillis = currentMillis;
+            ledState = !ledState;
+            digitalWrite(LED_BUILTIN, ledState);
+        }
+    }
+
 private:
+    bool measureTemp() {
+        float temperatura = sensorTemperatura.getTempC(endereco_temp); 
+        logger("Temperatura = "); 
+        logger(String(temperatura));
+        if (temperatura >= TEMPERATURA_ALVO)
+        {
+            digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
+            return true;
+        }
+    }
+
+    void setLEDState() {
+        switch (estadoAtual) {
+            case AGUARDANDO:
+             // Quick triple flash
+                delay(200);
+                for(int i = 0; i < 3; i++) {
+                    digitalWrite(LED_BUILTIN, LOW);
+                    delay(100);
+                    digitalWrite(LED_BUILTIN, HIGH);
+                    delay(100);
+                }
+                break;
+            case INICIO:
+                digitalWrite(LED_BUILTIN, HIGH);  // LED solid on
+                break;
+            case MONITORANDO_TEMPERATURA:
+                blinkLED();  // LED blinking
+                break;
+            case FINALIZADO:
+                digitalWrite(LED_BUILTIN, LOW); // LED off
+                break;
+        }
+    }
     bool verificaCondicoesPreparo()
     {
         logger("SEM AGUA: ");
@@ -166,6 +223,7 @@ ControladorCafe controlador;
 
 void setup()
 {
+    pinMode(LED_BUILTIN, OUTPUT);
     delay(200);
 
     softSerial.begin(BAUD_RATE);
@@ -237,7 +295,10 @@ void setup_wifi()
 
     while (WiFi.status() != WL_CONNECTED)
     {
-        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(250);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(250);
         Serial.print(".");
     }
 
@@ -280,6 +341,16 @@ void reconnect()
     {
         Serial.print("Attempting MQTT connection…");
         String clientId = "ESP8266Client -123123";
+
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(100);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+
         // Attempt to connect
         // Insert your password
         if (client.connect(clientId.c_str(), MQTT_USER, MQTT_PASS))
