@@ -10,10 +10,9 @@ import {
   setupIonicReact,
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import { lockOpen, construct, bug } from "ionicons/icons";
-
+import { construct, bug } from "ionicons/icons";
+import { RecoilRoot } from "recoil";
 import { MqttProvider } from "./contexts/MqttContext";
-import UnlockPage from "./pages/UnlockPage";
 import ManagePage from "./pages/ManagePage";
 import DebugPage from "./pages/DebugPage";
 
@@ -40,40 +39,35 @@ setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter>
-      <IonTabs>
-        <IonRouterOutlet>
-          <MqttProvider>
-            <Route exact path="/unlock">
-              <UnlockPage />
-            </Route>
-            <Route exact path="/manage">
-              <ManagePage />
-            </Route>
-            <Route exact path="/debug">
-              <DebugPage />
-            </Route>
-            <Route exact path="/">
-              <Redirect to="/unlock" />
-            </Route>
-          </MqttProvider>
-        </IonRouterOutlet>
-        <IonTabBar slot="bottom">
-          <IonTabButton tab="unlock" href="/unlock">
-            <IonIcon aria-hidden="true" icon={lockOpen} />
-            <IonLabel>Destrancar</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="manage" href="/manage">
-            <IonIcon aria-hidden="true" icon={construct} />
-            <IonLabel>Gerenciar</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="debug" href="/debug">
-            <IonIcon aria-hidden="true" icon={bug} />
-            <IonLabel>Debug</IonLabel>
-          </IonTabButton>
-        </IonTabBar>
-      </IonTabs>
-    </IonReactRouter>
+    <RecoilRoot>
+      <IonReactRouter>
+        <IonTabs>
+          <IonRouterOutlet>
+            <MqttProvider>
+              <Route exact path="/manage">
+                <ManagePage />
+              </Route>
+              <Route exact path="/debug">
+                <DebugPage />
+              </Route>
+              <Route exact path="/">
+                <Redirect to="/manage" />
+              </Route>
+            </MqttProvider>
+          </IonRouterOutlet>
+          <IonTabBar slot="bottom">
+            <IonTabButton tab="manage" href="/manage">
+              <IonIcon aria-hidden="true" icon={construct} />
+              <IonLabel>Gerenciar</IonLabel>
+            </IonTabButton>
+            <IonTabButton tab="debug" href="/debug">
+              <IonIcon aria-hidden="true" icon={bug} />
+              <IonLabel>Debug</IonLabel>
+            </IonTabButton>
+          </IonTabBar>
+        </IonTabs>
+      </IonReactRouter>
+    </RecoilRoot>
   </IonApp>
 );
 

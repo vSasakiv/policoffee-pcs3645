@@ -9,7 +9,6 @@ import {
 
 import StatusIndicator from "../../../components/StatusIndicator";
 import { useMqtt } from "../../../contexts/MqttContext";
-import { getMqttTopic } from "../../../config";
 import { StatusToRepresentationMap } from "../../../types";
 import { airplane, wifi } from "ionicons/icons";
 import MqttConnectForm from "./MqttConnectForm";

@@ -1,19 +1,18 @@
 import {
   IonContent,
   IonHeader,
-  IonIcon,
   IonItem,
   IonLabel,
   IonPage,
   IonTitle,
-  IonToggle,
+  IonGrid,
+  IonCol,
   IonToolbar,
 } from "@ionic/react";
 
 import MqttDebugCard from "./MqttDebugCard";
 import DebugWarningToolbar from "./DebugWarningToolbar";
 import { useState } from "react";
-import { moon, sunny } from "ionicons/icons";
 import { useMqtt } from "../../contexts/MqttContext";
 import LogViewer from "./LogViewer";
 
@@ -44,19 +43,17 @@ const DebugPage: React.FC = () => {
 
         <DebugWarningToolbar />
         <MqttDebugCard />
-        <IonItem>
-          <IonIcon icon={darkMode ? moon : sunny} slot="start" />
-          <IonLabel>Dark Mode</IonLabel>
-          <IonToggle
-            slot="end"
-            checked={darkMode}
-            onIonChange={toggleDarkMode}
-          />
+        <IonItem className={"ion-"}>
+          <IonGrid>
+            <div>
+              <IonLabel>Logs</IonLabel>
+            </div>
+            <IonCol>
+              <LogViewer logs={logs} />
+            </IonCol>
+          </IonGrid>
         </IonItem>
 
-        <IonItem>
-          <LogViewer logs={logs}/>
-        </IonItem>
       </IonContent>
     </IonPage>
   );

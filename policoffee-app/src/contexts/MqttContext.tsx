@@ -35,6 +35,7 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [repeatedLogCounter, setRepeatedLogCounter] = useState<number>(0);
   const [logs, setLogs] = useState<Log[]>([]);
 
   const logsTopic = getMqttTopic("logs");
@@ -59,7 +60,18 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
       msg: msg,
       timestamp: new Date()
     }
-    setLogs((prev) => [...prev, newLog]);
+    debugger;
+    if (logs.length > 0 && msg === logs[logs.length - 1].msg) {
+      if (repeatedLogCounter === 0) {
+        setRepeatedLogCounter((prev) => prev + 1)
+      } else {
+        setLogs((prev) => [...prev, newLog]);
+        setRepeatedLogCounter(0);
+      }
+    } else {
+      setRepeatedLogCounter(0);
+      setLogs((prev) => [...prev, newLog]);
+    }
   }
 
   const connect = (url: string, username: string, password: string) => {

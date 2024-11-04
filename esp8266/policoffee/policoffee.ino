@@ -26,9 +26,9 @@
 #define MAX_PAYLOAD_SIZE 32
 
 #define BIG_COFFEE_MODE 'G'
-#define TOPICO_AGENDAR "malcong/scheduler/datetime"
-#define TOPICO_AGENDAMENTO_STATUS "malcong/scheduler/status"
 #define TOPICO_INICIAR "malcong/inicio"
+#define TOPICO_FINALIZADO "malcong/finalizado"
+#define TOPICO_ERRO "malcong/erro"
 #define LOGS_TOPIC "malcong/logs"
 #define LED_BLINK_INTERVAL 500 // ms
 
@@ -144,6 +144,7 @@ public:
             break;
 
         case FINALIZADO:
+            publicaFinalizado();
             delay(DELAY_PREPARACAO);
             digitalWrite(PIN_PREPARAR, LOW);
             digitalWrite(PIN_FIM_TEMPERATURA, LOW);
@@ -162,6 +163,9 @@ public:
     }
 
 private:
+    void publicaFinalizado() {
+        client.publish(String(TOPICO_FINALIZADO).c_str(), String("finalizado").c_str());
+    }
     bool measureTemp() {
         float temperatura = sensorTemperatura.getTempC(endereco_temp); 
         logger("Temperatura = "); 

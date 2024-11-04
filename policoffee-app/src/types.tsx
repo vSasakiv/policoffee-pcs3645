@@ -23,3 +23,11 @@ export interface Log {
   msg: string;
   timestamp: Date;
 }
+
+export interface Schedule {
+  id: string;
+  name: string;
+  datetime: string;
+  callback: string;
+  executed: boolean;
+}
