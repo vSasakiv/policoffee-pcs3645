@@ -126,18 +126,24 @@ public:
             break;
 
         case MONITORANDO_TEMPERATURA:
-            sensorTemperatura.requestTemperatures();
+            if (verificaTimeoutEbulidor()) {
+                estadoAtual = AGUARDANDO;
+            }
+            else {
+                sensorTemperatura.requestTemperatures();
 
-            if (!sensorTemperatura.getAddress(endereco_temp,0)) { 
-                logger("SENSOR NAO CONECTADO");
-            } else {
-                currentMillis = millis();
-                // Só mede se passou o tempo
-                if (currentMillis - previousTempMeasurementMillis >= delayTempMeasurementMillis) {
-                    previousTempMeasurementMillis = currentMillis;
+                if (!sensorTemperatura.getAddress(endereco_temp,0)) { 
+                    logger("SENSOR NAO CONECTADO");
+                } else {
+                    currentMillis = millis();
+                    // Só mede se passou o tempo
+                    if (currentMillis - previousTempMeasurementMillis >= delayTempMeasurementMillis) {
+                        previousTempMeasurementMillis = currentMillis;
 
-                    if (measureTemp()) {
-                        estadoAtual = FINALIZADO;
+                        if (atingiuTemperaturaAlvo()) {
+                            setFimTemperatura();
+                            estadoAtual = FINALIZADO;
+                        }
                     }
                 }
             }
@@ -146,8 +152,7 @@ public:
         case FINALIZADO:
             publicaFinalizado();
             delay(DELAY_PREPARACAO);
-            digitalWrite(PIN_PREPARAR, LOW);
-            digitalWrite(PIN_FIM_TEMPERATURA, LOW);
+            resetSinaisDeControle();
             estadoAtual = AGUARDANDO;
             break;
         }
@@ -166,15 +171,11 @@ private:
     void publicaFinalizado() {
         client.publish(String(TOPICO_FINALIZADO).c_str(), String("finalizado").c_str());
     }
-    bool measureTemp() {
+    bool atingiuTemperaturaAlvo() {
         float temperatura = sensorTemperatura.getTempC(endereco_temp); 
         logger("Temperatura = "); 
         logger(String(temperatura));
-        if (temperatura >= TEMPERATURA_ALVO)
-        {
-            digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
-            return true;
-        }
+        return temperatura >= TEMPERATURA_ALVO;
     }
 
     void setLEDState() {
@@ -215,6 +216,21 @@ private:
     void iniciaPreparo()
     {
         digitalWrite(PIN_PREPARAR, HIGH);
+    }
+
+    bool verificaTimeoutEbulidor() {
+        logger("TIMEOUT EBULIDOR: ");
+        logger(String(digitalRead(PIN_TIMEOUT_EBULIDOR)));
+        return digitalRead(PIN_TIMEOUT_EBULIDOR) == HIGH;
+    }
+
+    void setFimTemperatura() {
+        digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
+    }
+
+    void resetSinaisDeControle() {
+        digitalWrite(PIN_PREPARAR, LOW);
+        digitalWrite(PIN_FIM_TEMPERATURA, LOW);
     }
 };
 
