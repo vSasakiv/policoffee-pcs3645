@@ -26,6 +26,7 @@
 #define MAX_PAYLOAD_SIZE 32
 
 #define BIG_COFFEE_MODE 'G'
+#define SMALL_COFFEE_MODE 'M'
 #define TOPICO_INICIAR "malcong/inicio"
 #define TOPICO_FINALIZADO "malcong/finalizado"
 #define TOPICO_ERRO "malcong/erro"
@@ -71,6 +72,7 @@ private:
     EstadoCafe estadoAtual;
     unsigned long previousTempMeasurementMillis = 0;
     unsigned long delayTempMeasurementMillis = 20000; // 2s
+    char tamanho;
 public:
     ControladorCafe()
     {
@@ -89,10 +91,17 @@ public:
         digitalWrite(LED_BUILTIN, HIGH); // LED starts off (HIGH is off for ESP8266)
     }
 
-    void inicia()
+    void inicia(char tamanho)
     {
-        logger("iniciando");
-        estadoAtual = INICIO;
+        logger("validando tamanho");
+        if (tamanho == BIG_COFFEE_MODE || tamanho == SMALL_COFFEE_MODE) {
+            logger("iniciando");
+            estadoAtual = INICIO;
+            ControladorCafe::tamanho = tamanho;
+        } else {
+            logger("Modo de tamanho inválido: ");
+            logger(String(tamanho));
+        }
     }
 
     void loop()
@@ -111,8 +120,8 @@ public:
             delay(DELAY_PREPARACAO);
 
             logger("escrevendo serial: ");
-            logger(String(BIG_COFFEE_MODE));
-            softSerial.write(BIG_COFFEE_MODE);
+            logger(String(tamanho));
+            softSerial.write(tamanho);
             delay(500);
             comecou = verificaCondicoesPreparo();
 
@@ -350,7 +359,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     if (strcmp(topic, TOPICO_INICIAR) == 0)
     {
-        controlador.inicia();
+        controlador.inicia(message[0]);
     }
 }
 
