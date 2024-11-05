@@ -60,7 +60,6 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
       msg: msg,
       timestamp: new Date()
     }
-    debugger;
     if (logs.length > 0 && msg === logs[logs.length - 1].msg) {
       if (repeatedLogCounter === 0) {
         setRepeatedLogCounter((prev) => prev + 1)
