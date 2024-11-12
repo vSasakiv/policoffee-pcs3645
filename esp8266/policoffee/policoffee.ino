@@ -73,7 +73,7 @@ enum TipoErro {
     TIMEOUT_EBULIDOR = 'E',
 
     SEM_ERRO = '0'
-}
+};
 
 class ControladorCafe
 {
