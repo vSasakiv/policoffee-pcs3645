@@ -21,7 +21,7 @@
 #define PIN_SENSOR_TEMPERATURA D7
 
 #define PIN_RX 255
-#define TEMPERATURA_ALVO 30
+#define TEMPERATURA_ALVO 90
 #define DELAY_PREPARACAO 200 // ms
 #define MAX_PAYLOAD_SIZE 32
 
@@ -80,7 +80,7 @@ class ControladorCafe
 private:
     EstadoCafe estadoAtual;
     unsigned long previousTempMeasurementMillis = 0;
-    unsigned long delayTempMeasurementMillis = 20000; // 2s
+    unsigned long delayTempMeasurementMillis = 2000; // 2s
     char tamanho;
     TipoErro erro;
 public:
@@ -180,6 +180,7 @@ public:
             erro = SEM_ERRO;
             break;
         }
+
     }
 
     void blinkLED() {
@@ -384,7 +385,7 @@ void callback(char *topic, byte *payload, unsigned int length)
     memcpy(message, payload, length);
     message[length] = '\0';
 
-    logger("message received");
+     logger("message received");
     logger(String(topic));
     logger(String(message)); 
     Serial.print("Message received on topic: ");
@@ -392,10 +393,9 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.print("Message: ");
     Serial.println(message);
 
-    if (strcmp(topic, TOPICO_INICIAR) == 0)
-    {
-        controlador.inicia(message[0]);
-    }
+ 
+    controlador.inicia(message[0]);
+
 }
 
 void reconnect()
