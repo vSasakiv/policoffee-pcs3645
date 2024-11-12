@@ -174,12 +174,12 @@ public:
             resetSinaisDeControle();
             estadoAtual = AGUARDANDO;
             break;
-        }
-
         case ERRO:
             publicaErro();
             estadoAtual = AGUARDANDO;
             erro = SEM_ERRO;
+            break;
+        }
     }
 
     void blinkLED() {
