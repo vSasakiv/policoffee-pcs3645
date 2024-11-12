@@ -63,8 +63,17 @@ enum EstadoCafe
     INICIO,
     PREPARANDO,
     MONITORANDO_TEMPERATURA,
-    FINALIZADO
+    FINALIZADO,
+    ERRO
 };
+
+enum TipoErro {
+    SEM_AGUA = 'A',
+    SEM_XICARA = 'X',
+    TIMEOUT_EBULIDOR = 'E',
+
+    SEM_ERRO = '0'
+}
 
 class ControladorCafe
 {
@@ -73,6 +82,7 @@ private:
     unsigned long previousTempMeasurementMillis = 0;
     unsigned long delayTempMeasurementMillis = 20000; // 2s
     char tamanho;
+    TipoErro erro;
 public:
     ControladorCafe()
     {
@@ -130,13 +140,13 @@ public:
               estadoAtual = MONITORANDO_TEMPERATURA;  
             } else { // FPGA retornou erro
               logger("deu ruim");
-              estadoAtual = AGUARDANDO; // TODO: Estado de erro
+              estadoAtual = ERRO;
             }
             break;
 
         case MONITORANDO_TEMPERATURA:
             if (verificaTimeoutEbulidor()) {
-                estadoAtual = AGUARDANDO;
+                estadoAtual = ERRO;
             }
             else {
                 sensorTemperatura.requestTemperatures();
@@ -165,6 +175,11 @@ public:
             estadoAtual = AGUARDANDO;
             break;
         }
+
+        case ERRO:
+            publicaErro();
+            estadoAtual = AGUARDANDO;
+            erro = SEM_ERRO;
     }
 
     void blinkLED() {
@@ -212,14 +227,23 @@ private:
     }
     bool verificaCondicoesPreparo()
     {
+        int pinoAgua = digitalRead(PIN_SEM_AGUA);
+        int pinoXicara = digitalRead(PIN_SEM_XICARA);
+
         logger("SEM AGUA: ");
-        logger(String(digitalRead(PIN_SEM_AGUA)));
+        logger(String(pinoAgua));
 
         logger("SEM XICARA: ");
-        logger(String(digitalRead(PIN_SEM_XICARA)));
-        
-        return (digitalRead(PIN_SEM_AGUA) == LOW &&
-                digitalRead(PIN_SEM_XICARA) == LOW);
+        logger(String(pinoXicara));
+
+        if (pinoAgua == HIGH) {
+            erro = SEM_AGUA;
+        }
+        else if (pinoXicara == HIGH) {
+            erro = SEM_XICARA;
+        }
+
+        return (pinoAgua == LOW && pinoXicara == LOW);
     }
 
     void iniciaPreparo()
@@ -228,9 +252,16 @@ private:
     }
 
     bool verificaTimeoutEbulidor() {
+        int pinoTimeoutEbulidor = digitalRead(PIN_TIMEOUT_EBULIDOR);
+
         logger("TIMEOUT EBULIDOR: ");
-        logger(String(digitalRead(PIN_TIMEOUT_EBULIDOR)));
-        return digitalRead(PIN_TIMEOUT_EBULIDOR) == HIGH;
+        logger(String(pinoTimeoutEbulidor));
+
+        if (pinoTimeoutEbulidor == HIGH) {
+            erro = TIMEOUT_EBULIDOR;
+        }
+
+        return (pinoTimeoutEbulidor == HIGH);
     }
 
     void setFimTemperatura() {
@@ -240,6 +271,10 @@ private:
     void resetSinaisDeControle() {
         digitalWrite(PIN_PREPARAR, LOW);
         digitalWrite(PIN_FIM_TEMPERATURA, LOW);
+    }
+
+    void publicaErro() {
+        client.publish(String(TOPICO_ERRO).c_str(), String(erro).c_str());
     }
 };
 
