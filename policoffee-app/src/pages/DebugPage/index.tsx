@@ -8,6 +8,7 @@ import {
   IonGrid,
   IonCol,
   IonToolbar,
+  IonButton,
 } from "@ionic/react";
 
 import MqttDebugCard from "./MqttDebugCard";
@@ -15,18 +16,17 @@ import DebugWarningToolbar from "./DebugWarningToolbar";
 import { useState } from "react";
 import { useMqtt } from "../../contexts/MqttContext";
 import LogViewer from "./LogViewer";
+import { getMqttTopic } from "../../config";
 
 const DebugPage: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
-  const { logs } = useMqtt();
+  const { logs, publish, limpaLogs } = useMqtt();
 
-  // Function to toggle dark mode
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    document.body.classList.toggle("dark", newMode); // Toggle dark mode class on body
-  };
-
+  const topicoReset = getMqttTopic("reset")
+  const publishReset = () => {
+    publish(topicoReset, 'resetando');
+  }
+  
   return (
     <IonPage>
       <IonHeader>
@@ -43,6 +43,20 @@ const DebugPage: React.FC = () => {
 
         <DebugWarningToolbar />
         <MqttDebugCard />
+        <IonButton
+          onClick={publishReset}
+          className="ion-margin-top"
+          expand="full"
+          color="danger">
+          Resetar
+        </IonButton>
+        <IonButton
+          onClick={limpaLogs}
+          className="ion-margin-top"
+          expand="full"
+          color="danger">
+          Limpar Logs
+        </IonButton>
         <IonItem className={"ion-"}>
           <IonGrid>
             <div>
@@ -53,7 +67,6 @@ const DebugPage: React.FC = () => {
             </IonCol>
           </IonGrid>
         </IonItem>
-
       </IonContent>
     </IonPage>
   );

@@ -12,6 +12,7 @@ interface MqttContextType {
   connect: (url: string, username: string, password: string) => void;
   isConnecting: boolean;
   logs: Log[];
+  limpaLogs: () => void
   openedModal: string | undefined
 }
 
@@ -24,6 +25,7 @@ const MqttContext = createContext<MqttContextType>({
   connect: () => { },
   isConnecting: false,
   logs: [],
+  limpaLogs: () => {},
   openedModal: undefined
 });
 
@@ -44,7 +46,11 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
   const logsTopic = getMqttTopic("logs");
   const erroTopic = getMqttTopic("erro");
   const finalizadoTopic = getMqttTopic("finalizado");
+  const maxLength = 64
 
+  const limpaLogs = () => {
+    setLogs([])
+  }
   useEffect(() => {
     connect(MQTT_URL, MQTT_USER, MQTT_PASSWORD); // Connect with default values on load
   }, []);
@@ -78,12 +84,12 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
       if (repeatedLogCounter === 0) {
         setRepeatedLogCounter((prev) => prev + 1)
       } else {
-        setLogs((prev) => [...prev, newLog]);
+        setLogs((prev) => [...prev, newLog].slice(prev.length - maxLength, prev.length));
         setRepeatedLogCounter(0);
       }
     } else {
       setRepeatedLogCounter(0);
-      setLogs((prev) => [...prev, newLog]);
+      setLogs((prev) => [...prev, newLog].slice(prev.length - maxLength, prev.length));
     }
   }
 
@@ -149,6 +155,7 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
         connect,
         isConnecting,
         logs,
+        limpaLogs,
         openedModal
       }}
     >

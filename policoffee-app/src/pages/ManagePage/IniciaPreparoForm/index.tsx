@@ -11,7 +11,7 @@ import { useMqtt } from "../../../contexts/MqttContext";
 
 const IniciaPreparoForm: React.FC = () => {
   const { publish } = useMqtt();
-  const iniciaPreparoTopic = getMqttTopic("modify");
+  const iniciaPreparoTopic = getMqttTopic("inicio");
 
   const iniciaPreparoMedio = () => {
     publish(iniciaPreparoTopic, 'M');
