@@ -21,11 +21,12 @@
 #define PIN_SENSOR_TEMPERATURA D7
 
 #define PIN_RX 255
-#define TEMPERATURA_ALVO 30
+#define TEMPERATURA_ALVO 90
 #define DELAY_PREPARACAO 200 // ms
 #define MAX_PAYLOAD_SIZE 32
 
 #define BIG_COFFEE_MODE 'G'
+#define SMALL_COFFEE_MODE 'M'
 #define TOPICO_INICIAR "malcong/inicio"
 #define TOPICO_FINALIZADO "malcong/finalizado"
 #define TOPICO_ERRO "malcong/erro"
@@ -62,7 +63,16 @@ enum EstadoCafe
     INICIO,
     PREPARANDO,
     MONITORANDO_TEMPERATURA,
-    FINALIZADO
+    FINALIZADO,
+    ERRO
+};
+
+enum TipoErro {
+    SEM_AGUA = 'A',
+    SEM_XICARA = 'X',
+    TIMEOUT_EBULIDOR = 'E',
+
+    SEM_ERRO = '0'
 };
 
 class ControladorCafe
@@ -70,7 +80,9 @@ class ControladorCafe
 private:
     EstadoCafe estadoAtual;
     unsigned long previousTempMeasurementMillis = 0;
-    unsigned long delayTempMeasurementMillis = 20000; // 2s
+    unsigned long delayTempMeasurementMillis = 2000; // 2s
+    char tamanho;
+    TipoErro erro;
 public:
     ControladorCafe()
     {
@@ -89,10 +101,17 @@ public:
         digitalWrite(LED_BUILTIN, HIGH); // LED starts off (HIGH is off for ESP8266)
     }
 
-    void inicia()
+    void inicia(char tamanho)
     {
-        logger("iniciando");
-        estadoAtual = INICIO;
+        logger("validando tamanho");
+        if (tamanho == BIG_COFFEE_MODE || tamanho == SMALL_COFFEE_MODE) {
+            logger("iniciando");
+            estadoAtual = INICIO;
+            ControladorCafe::tamanho = tamanho;
+        } else {
+            logger("Modo de tamanho inválido: ");
+            logger(String(tamanho));
+        }
     }
 
     void loop()
@@ -111,8 +130,8 @@ public:
             delay(DELAY_PREPARACAO);
 
             logger("escrevendo serial: ");
-            logger(String(BIG_COFFEE_MODE));
-            softSerial.write(BIG_COFFEE_MODE);
+            logger(String(tamanho));
+            softSerial.write(tamanho);
             delay(500);
             comecou = verificaCondicoesPreparo();
 
@@ -121,23 +140,29 @@ public:
               estadoAtual = MONITORANDO_TEMPERATURA;  
             } else { // FPGA retornou erro
               logger("deu ruim");
-              estadoAtual = AGUARDANDO; // TODO: Estado de erro
+              estadoAtual = ERRO;
             }
             break;
 
         case MONITORANDO_TEMPERATURA:
-            sensorTemperatura.requestTemperatures();
+            if (verificaTimeoutEbulidor()) {
+                estadoAtual = ERRO;
+            }
+            else {
+                sensorTemperatura.requestTemperatures();
 
-            if (!sensorTemperatura.getAddress(endereco_temp,0)) { 
-                logger("SENSOR NAO CONECTADO");
-            } else {
-                currentMillis = millis();
-                // Só mede se passou o tempo
-                if (currentMillis - previousTempMeasurementMillis >= delayTempMeasurementMillis) {
-                    previousTempMeasurementMillis = currentMillis;
+                if (!sensorTemperatura.getAddress(endereco_temp,0)) { 
+                    logger("SENSOR NAO CONECTADO");
+                } else {
+                    currentMillis = millis();
+                    // Só mede se passou o tempo
+                    if (currentMillis - previousTempMeasurementMillis >= delayTempMeasurementMillis) {
+                        previousTempMeasurementMillis = currentMillis;
 
-                    if (measureTemp()) {
-                        estadoAtual = FINALIZADO;
+                        if (atingiuTemperaturaAlvo()) {
+                            setFimTemperatura();
+                            estadoAtual = FINALIZADO;
+                        }
                     }
                 }
             }
@@ -146,11 +171,16 @@ public:
         case FINALIZADO:
             publicaFinalizado();
             delay(DELAY_PREPARACAO);
-            digitalWrite(PIN_PREPARAR, LOW);
-            digitalWrite(PIN_FIM_TEMPERATURA, LOW);
+            resetSinaisDeControle();
             estadoAtual = AGUARDANDO;
             break;
+        case ERRO:
+            publicaErro();
+            estadoAtual = AGUARDANDO;
+            erro = SEM_ERRO;
+            break;
         }
+
     }
 
     void blinkLED() {
@@ -166,15 +196,11 @@ private:
     void publicaFinalizado() {
         client.publish(String(TOPICO_FINALIZADO).c_str(), String("finalizado").c_str());
     }
-    bool measureTemp() {
+    bool atingiuTemperaturaAlvo() {
         float temperatura = sensorTemperatura.getTempC(endereco_temp); 
         logger("Temperatura = "); 
         logger(String(temperatura));
-        if (temperatura >= TEMPERATURA_ALVO)
-        {
-            digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
-            return true;
-        }
+        return temperatura >= TEMPERATURA_ALVO;
     }
 
     void setLEDState() {
@@ -202,19 +228,54 @@ private:
     }
     bool verificaCondicoesPreparo()
     {
+        int pinoAgua = digitalRead(PIN_SEM_AGUA);
+        int pinoXicara = digitalRead(PIN_SEM_XICARA);
+
         logger("SEM AGUA: ");
-        logger(String(digitalRead(PIN_SEM_AGUA)));
+        logger(String(pinoAgua));
 
         logger("SEM XICARA: ");
-        logger(String(digitalRead(PIN_SEM_XICARA)));
-        
-        return (digitalRead(PIN_SEM_AGUA) == LOW &&
-                digitalRead(PIN_SEM_XICARA) == LOW);
+        logger(String(pinoXicara));
+
+        if (pinoAgua == HIGH) {
+            erro = SEM_AGUA;
+        }
+        else if (pinoXicara == HIGH) {
+            erro = SEM_XICARA;
+        }
+
+        return (pinoAgua == LOW && pinoXicara == LOW);
     }
 
     void iniciaPreparo()
     {
         digitalWrite(PIN_PREPARAR, HIGH);
+    }
+
+    bool verificaTimeoutEbulidor() {
+        int pinoTimeoutEbulidor = digitalRead(PIN_TIMEOUT_EBULIDOR);
+
+        logger("TIMEOUT EBULIDOR: ");
+        logger(String(pinoTimeoutEbulidor));
+
+        if (pinoTimeoutEbulidor == HIGH) {
+            erro = TIMEOUT_EBULIDOR;
+        }
+
+        return (pinoTimeoutEbulidor == HIGH);
+    }
+
+    void setFimTemperatura() {
+        digitalWrite(PIN_FIM_TEMPERATURA, HIGH);
+    }
+
+    void resetSinaisDeControle() {
+        digitalWrite(PIN_PREPARAR, LOW);
+        digitalWrite(PIN_FIM_TEMPERATURA, LOW);
+    }
+
+    void publicaErro() {
+        client.publish(String(TOPICO_ERRO).c_str(), String(erro).c_str());
     }
 };
 
@@ -324,7 +385,7 @@ void callback(char *topic, byte *payload, unsigned int length)
     memcpy(message, payload, length);
     message[length] = '\0';
 
-    logger("message received");
+     logger("message received");
     logger(String(topic));
     logger(String(message)); 
     Serial.print("Message received on topic: ");
@@ -332,10 +393,9 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.print("Message: ");
     Serial.println(message);
 
-    if (strcmp(topic, TOPICO_INICIAR) == 0)
-    {
-        controlador.inicia();
-    }
+ 
+    controlador.inicia(message[0]);
+
 }
 
 void reconnect()
