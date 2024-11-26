@@ -12,6 +12,7 @@ interface MqttContextType {
   connect: (url: string, username: string, password: string) => void;
   isConnecting: boolean;
   logs: Log[];
+  openedModal: string | undefined
 }
 
 const MqttContext = createContext<MqttContextType>({
@@ -23,6 +24,7 @@ const MqttContext = createContext<MqttContextType>({
   connect: () => { },
   isConnecting: false,
   logs: [],
+  openedModal: undefined
 });
 
 export const useMqtt = () => useContext(MqttContext);
@@ -37,13 +39,14 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
   const [errors, setErrors] = useState<string[]>([]);
   const [repeatedLogCounter, setRepeatedLogCounter] = useState<number>(0);
   const [logs, setLogs] = useState<Log[]>([]);
+  const [openedModal, setOpenedModal] = useState<string | undefined>();
 
   const logsTopic = getMqttTopic("logs");
+  const erroTopic = getMqttTopic("erro");
 
   useEffect(() => {
     connect(MQTT_URL, MQTT_USER, MQTT_PASSWORD); // Connect with default values on load
   }, []);
-
   const updateStateOnMessage = (topic: string, message: any) => {
     console.log(`received ${message.toString()} on topic ${topic}`)
     let msg = (message.toString());
@@ -52,7 +55,14 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
       case logsTopic:
         updateLogs(msg);
         break;
+      case erroTopic:
+        showErroModal(msg);
+        break;
     }
+  }
+
+  const showErroModal = (msg: string) => {
+    setOpenedModal(msg);
   }
 
   const updateLogs = (msg: string) => {
@@ -134,7 +144,8 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
         errors,
         connect,
         isConnecting,
-        logs
+        logs,
+        openedModal
       }}
     >
       {children}

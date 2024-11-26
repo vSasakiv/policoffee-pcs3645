@@ -1,12 +1,12 @@
 import { IonContent, IonPage, IonButton } from "@ionic/react";
 import Lottie from "react-lottie";
-import blockedAnimationData from "./BlockedAnimation.json";
+import animationData from "./SemAguaAnimation.json";
 
-const BlockedModal = ({ onDismiss }: { onDismiss: () => void }) => {
-  const blockedAnimationOptions = {
+const SemAguaModal = ({ onDismiss }: { onDismiss: () => void }) => {
+  const animationOptions = {
     loop: false,
     autoplay: true,
-    animationData: blockedAnimationData,
+    animationData: animationData,
     rendererSettings: {
       preserveAspectRatio: "xMidYMid slice",
     },
@@ -32,9 +32,9 @@ const BlockedModal = ({ onDismiss }: { onDismiss: () => void }) => {
             gap: 64,
           }}
         >
-          <h1>O armário foi bloqueado!</h1>
-
-          <Lottie options={blockedAnimationOptions} height={200} width={200} />
+          <h1>Cafeteira sem água!</h1>
+          <p>Foi feita uma tentativa de preparar café, porém a cafeteira não possui água. Reabasteça antes de realizar um novo preparo.</p>
+          <Lottie options={animationOptions} height={200} width={200} />
 
           <IonButton onClick={onDismiss} expand="block" color="danger">
             Voltar
@@ -45,4 +45,4 @@ const BlockedModal = ({ onDismiss }: { onDismiss: () => void }) => {
   );
 };
 
-export default BlockedModal;
+export default SemAguaModal;
