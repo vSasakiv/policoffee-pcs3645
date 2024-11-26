@@ -14,6 +14,7 @@ import { useMqtt } from "../../contexts/MqttContext";
 import { useEffect } from "react";
 import SemCanecaModal from "../../components/SemCanecaModal";
 import TimeoutEbulidorModal from "../../components/TimeoutEbulidorModal";
+import CafePreparadoModal from "../../components/CafePreparadoModal";
 
 const ManagePage: React.FC = () => {
   const {
@@ -32,6 +33,11 @@ const ManagePage: React.FC = () => {
     onDismiss: () => dismissTimeoutEbulidorModal(),
   });
 
+  const [presentCafePreparadoModal, dismissCafePreparadoModal] = useIonModal(CafePreparadoModal, {
+    onDismiss: () => dismissCafePreparadoModal(),
+  });
+
+
   useEffect(() => {
     switch (openedModal) {
       case 'A':
@@ -43,6 +49,10 @@ const ManagePage: React.FC = () => {
       case 'E':
         presentTimeoutEbulidorModal();
         break;
+      case 'F':
+        presentCafePreparadoModal();
+        break;
+
     }
   }, [openedModal])
   return (

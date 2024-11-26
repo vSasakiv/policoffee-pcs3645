@@ -43,6 +43,7 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logsTopic = getMqttTopic("logs");
   const erroTopic = getMqttTopic("erro");
+  const finalizadoTopic = getMqttTopic("finalizado");
 
   useEffect(() => {
     connect(MQTT_URL, MQTT_USER, MQTT_PASSWORD); // Connect with default values on load
@@ -57,6 +58,9 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
         break;
       case erroTopic:
         showErroModal(msg);
+        break;
+      case finalizadoTopic:
+        setOpenedModal('F');
         break;
     }
   }
