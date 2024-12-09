@@ -15,13 +15,13 @@
 #define PIN_PREPARAR D1
 #define PIN_TX D2
 #define PIN_FIM_TEMPERATURA D3
-#define PIN_SEM_AGUA D8
+#define PIN_PODE_CONTINUAR D8
 #define PIN_SEM_XICARA D5
 #define PIN_TIMEOUT_EBULIDOR D6
 #define PIN_SENSOR_TEMPERATURA D7
 
 #define PIN_RX 255
-#define TEMPERATURA_ALVO 90
+#define TEMPERATURA_ALVO 95
 #define DELAY_PREPARACAO 200 // ms
 #define MAX_PAYLOAD_SIZE 32
 
@@ -30,6 +30,7 @@
 #define TOPICO_INICIAR "malcong/inicio"
 #define TOPICO_FINALIZADO "malcong/finalizado"
 #define TOPICO_ERRO "malcong/erro"
+#define TOPICO_RESET "malcong/reset"
 #define LOGS_TOPIC "malcong/logs"
 #define LED_BLINK_INTERVAL 500 // ms
 
@@ -81,7 +82,7 @@ private:
     EstadoCafe estadoAtual;
     unsigned long previousTempMeasurementMillis = 0;
     unsigned long delayTempMeasurementMillis = 2000; // 2s
-    char tamanho;
+    char tamanho[2] = {'A', 'B'};
     TipoErro erro;
 public:
     ControladorCafe()
@@ -89,7 +90,7 @@ public:
         estadoAtual = AGUARDANDO;
 
         // Configura os pinos
-        pinMode(PIN_SEM_AGUA, INPUT);
+
         pinMode(PIN_SEM_XICARA, INPUT);
         pinMode(PIN_PREPARAR, OUTPUT);
         pinMode(PIN_FIM_TEMPERATURA, OUTPUT);
@@ -101,19 +102,22 @@ public:
         digitalWrite(LED_BUILTIN, HIGH); // LED starts off (HIGH is off for ESP8266)
     }
 
-    void inicia(char tamanho)
+    void inicia(char tamanhop)
     {
         logger("validando tamanho");
-        if (tamanho == BIG_COFFEE_MODE || tamanho == SMALL_COFFEE_MODE) {
-            logger("iniciando");
-            estadoAtual = INICIO;
-            ControladorCafe::tamanho = tamanho;
-        } else {
-            logger("Modo de tamanho inválido: ");
-            logger(String(tamanho));
-        }
+        logger("iniciando");
+        estadoAtual = INICIO;
+        Serial.print("Iniciando com tamanho: ");
+        Serial.println(tamanho);
+        tamanho[0] = tamanhop == 'G' ? 'G' : 'P';
+ 
     }
 
+    void reset() {
+      digitalWrite(PIN_PREPARAR, LOW);
+      estadoAtual = AGUARDANDO;
+    }
+    
     void loop()
     {
         bool comecou;
@@ -123,15 +127,16 @@ public:
         switch (estadoAtual)
         {
         case AGUARDANDO:
+            digitalWrite(PIN_PREPARAR, LOW);
             break;
 
         case INICIO:
             iniciaPreparo();
             delay(DELAY_PREPARACAO);
 
-            logger("escrevendo serial: ");
-            logger(String(tamanho));
-            softSerial.write(tamanho);
+            softSerial.write(tamanho[0]);
+            Serial.print("Escrevendo serial: ");
+            Serial.println(tamanho[0]);
             delay(500);
             comecou = verificaCondicoesPreparo();
 
@@ -162,6 +167,7 @@ public:
                         if (atingiuTemperaturaAlvo()) {
                             setFimTemperatura();
                             estadoAtual = FINALIZADO;
+                            digitalWrite(PIN_PREPARAR, LOW);
                         }
                     }
                 }
@@ -169,6 +175,7 @@ public:
             break;
 
         case FINALIZADO:
+            digitalWrite(PIN_PREPARAR, LOW);
             publicaFinalizado();
             delay(DELAY_PREPARACAO);
             resetSinaisDeControle();
@@ -200,6 +207,8 @@ private:
         float temperatura = sensorTemperatura.getTempC(endereco_temp); 
         logger("Temperatura = "); 
         logger(String(temperatura));
+        Serial.println("Temperatura = ");
+        Serial.print(String(temperatura));
         return temperatura >= TEMPERATURA_ALVO;
     }
 
@@ -228,23 +237,19 @@ private:
     }
     bool verificaCondicoesPreparo()
     {
-        int pinoAgua = digitalRead(PIN_SEM_AGUA);
+  
         int pinoXicara = digitalRead(PIN_SEM_XICARA);
 
-        logger("SEM AGUA: ");
-        logger(String(pinoAgua));
 
         logger("SEM XICARA: ");
         logger(String(pinoXicara));
 
-        if (pinoAgua == HIGH) {
-            erro = SEM_AGUA;
-        }
-        else if (pinoXicara == HIGH) {
+     
+        if (pinoXicara == HIGH) {
             erro = SEM_XICARA;
         }
 
-        return (pinoAgua == LOW && pinoXicara == LOW);
+        return (pinoXicara == LOW);
     }
 
     void iniciaPreparo()
@@ -392,10 +397,27 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.println(topic);
     Serial.print("Message: ");
     Serial.println(message);
+    
+    if (strcmp(message, "resetando") == 0)
+    {
+      Serial.println("Resetando");
+      controlador.reset();
+    }
+    else
+    {
+      Serial.print("Iniciando com modo: ");
+      Serial.println(message);
 
+      for (int i=0; i < MAX_PAYLOAD_SIZE; i++) {
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(message[i]);
+      }
+      
+      controlador.inicia(message[0]);
+    }
+   
  
-    controlador.inicia(message[0]);
-
 }
 
 void reconnect()
@@ -421,6 +443,7 @@ void reconnect()
         {
             Serial.println("connected");
             client.subscribe(TOPICO_INICIAR);
+            client.subscribe(TOPICO_RESET);
         }
         else
         {
