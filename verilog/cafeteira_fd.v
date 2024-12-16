@@ -1,27 +1,22 @@
 module cafeteira_fd (
     input wire clock,
     input wire rx_esp,    // ESP
-    input wire echo_agua, // HC SR04
     input wire echo_xicara, // HC SR04
-    input wire zera_sensor_agua, // UC
     input wire zera_sensor_xicara, // UC
     input wire zera_bomba, // UC
     input wire zera_valvula, // UC
     input wire zera_ebulidor, // UC
     input wire zera_serial, // UC
-    input wire medir_agua, // UC
     input wire verifica_xicara, // UC
     input wire liga_bomba, // UC
     input wire liga_ebulidor, // UC
     input wire liga_valvula, // UC
     input wire fim_temperatura, // ESP
+	 input wire conta_interferencia, // UC
+	 input wire conta_fim, // UC
 
-    output wire trigger_agua, // HC SR04
     output wire trigger_xicara, // HC SR04
     output pronto_serial, // UC
-    output pronto_sensor_agua, // UC
-    output timeout_agua, // UC
-    output suficiente, // UC
     output pronto_sensor_xicara, // UC
     output timeout_xicara, // UC
     output tem_xicara, // UC
@@ -31,7 +26,9 @@ module cafeteira_fd (
     output bomba, // BOMBA
     output valvula, // VALVULA
     output ebulidor, // EBULIDOR
-    output fim_valvula // UC
+    output fim_valvula, // UC
+	 output fim_contagem, // UC
+	 output fim_espera_fim // UC
 );
 
     wire [1:0] s_modo;
@@ -42,18 +39,6 @@ module cafeteira_fd (
         .rxd    (rx_esp),
         .pronto (pronto_serial),
         .modo   (s_modo)
-    );
-
-    sensor_agua s_agua (
-        .clock        (clock),
-        .reset        (zera_sensor_agua),
-        .medir        (medir_agua),
-        .echo         (echo_agua),
-        .modo         (s_modo),
-        .trigger      (trigger_agua),
-        .pronto       (pronto_sensor_agua),
-        .suficiente   (suficiente),
-        .timeout      (timeout_agua)
     );
 
     sensor_xicara s_xicara (
@@ -93,6 +78,31 @@ module cafeteira_fd (
         .valvula (valvula),
         .fim_valvula (fim_valvula)
     );
-
+	 
+    contador_m #(
+        .M(50000000), 
+        .N(26)
+    ) contador_interferencia (
+        .clock   (clock),
+        .zera_as (1'b0),
+        .zera_s  (zera_ebulidor),
+        .conta   (conta_interferencia),
+        .fim     (fim_contagem),
+        .Q       (),
+        .meio    ()
+    );
+	 
+	 contador_m #(
+        .M(500000000), 
+        .N(29)
+    ) contador_fim (
+        .clock   (clock),
+        .zera_as (1'b0),
+        .zera_s  (zera_valvula),
+        .conta   (conta_fim),
+        .fim     (fim_espera_fim),
+        .Q       (),
+        .meio    ()
+    );
 
 endmodule

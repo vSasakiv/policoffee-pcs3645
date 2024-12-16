@@ -12,8 +12,8 @@ module controle_ebulidor (
     reg conta_timeout;
 
     contador_m #(
-        .M(50000000), // 1 seg
-        .N(26)
+        .M(4200000000), 
+        .N(32)
     ) contador_timeout (
         .clock   (clock),
         .zera_as (1'b0),

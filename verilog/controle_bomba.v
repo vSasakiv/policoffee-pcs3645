@@ -19,8 +19,8 @@ wire fim_bombeamento;
 assign fim_bombeamento = fim_pequeno | fim_grande;
 
 contador_m #(
-    .M(200000000), // 4 seg
-    .N(28)
+    .M(625000000), // 12,5 seg
+    .N(30)
 ) contador_grande (
     .clock   (clock),
     .zera_as (1'b0),
@@ -32,8 +32,8 @@ contador_m #(
 );
 
 contador_m #(
-    .M(50000000), // 1 seg
-    .N(26)
+    .M(312500000), // 6,25 seg
+    .N(29)
 ) contador_pequeno (
     .clock   (clock),
     .zera_as (1'b0),

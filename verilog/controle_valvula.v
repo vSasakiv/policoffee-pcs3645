@@ -11,8 +11,8 @@ module controle_valvula (
     wire s_fim_valvula;
     
     contador_m #(
-        .M(50000000), // 1 seg
-        .N(26)
+        .M(3000000000), // 60 seg
+        .N(32)
     ) contador_valvula (
         .clock   (clock),
         .zera_as (1'b0),
